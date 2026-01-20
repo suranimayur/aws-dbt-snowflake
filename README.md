@@ -28,35 +28,79 @@ graph LR
 - **Tables:** `listings`, `hosts`, `bookings`
 - **Configuration:** Defined in `models/sources/sources.yml`
 
-### 2. Bronze Layer (Raw Ingestion)
-- **Schema:** `bronze`
-- **Objective:** Ingest raw data from staging with minimal transformation.
-- **Strategy:** Incremental loading to handle new records efficiently.
-- **Models:**
-  - `bronze_listings.sql`
-  - `bronze_hosts.sql`
-  - `bronze_bookings.sql`
+---
 
-### 3. Silver Layer (Cleaned & Transformed)
-- **Schema:** `silver`
-- **Objective:** Cleanse data, standardize formats, and add business logic.
-- **Key Features:**
-  - **Tagging:** Uses custom macros (e.g., `tag('PRICE_PER_NIGHT')`) to categorize data.
-  - **Incremental Logic:** Optimizes performance by processing only new/changed data.
-- **Models:**
-  - `silver_listings.sql`
-  - `silver_hosts.sql`
-  - `silver_bookings.sql`
+## 🧠 Key DBT Concepts & Implementation Details
 
-### 4. Gold Layer (Business Intelligence)
-- **Schema:** `gold`
-- **Objective:** Production-ready data for reporting and analytics.
-- **Components:**
-  - **OBT (One Big Table):** `obt.sql` uses Jinja templating to dynamically join silver tables into a wide, de-normalized table for easy analysis.
-  - **Facts & Dimensions:**
-    - `facts.sql`: Derives metrics connecting dimensions.
-    - `ephemeral/` models: Intermediate calculations for dimensionality.
-  - **Snapshots:** SCD Type 2 tracking for dimensions (e.g., `dim_listings`) configured in the `snapshots/` directory.
+This project leverages advanced DBT features to ensure scalability, maintainability, and clean code. Below is a deep dive into the specific concepts used:
+
+### 1. Materialization Strategies
+We use different materialization strategies per layer to balance performance and storage.
+
+- **Incremental Models (Bronze & Silver):**
+  - **Concept:** Instead of rebuilding the entire table every run, we only process *new* or *changed* records.
+  - **Implementation:** In `bronze_listings.sql`, we use the `is_incremental()` macro.
+    ```sql
+    {% if is_incremental() %}
+      WHERE CREATED_AT > (SELECT MAX(CREATED_AT) FROM {{ this }})
+    {% endif %}
+    ```
+  - **Benefit:** Drastically reduces warehouse compute costs and runtime for large datasets.
+
+- **Ephemeral Models (Gold Helper Models):**
+  - **Concept:** These are virtually defined models that are not materialized as physical tables/views in the database. Instead, their code is interpolated into downstream models (like a CTE).
+  - **Usage:** Located in `models/gold/ephemeral`. Used for intermediate calculations that don't need to be queried directly.
+
+- **Table Materialization:**
+  - Used for final Gold layer models to ensure fast query performance for BI tools.
+
+### 2. Jinja Templating & Dynamic SQL
+We use Jinja extensively to write "DRY" (Don't Repeat Yourself) SQL.
+
+- **Dynamic OBT Generation:**
+  - In `models/gold/obt.sql`, typically one would write a massive `SELECT ... LEFT JOIN ... LEFT JOIN ...` query.
+  - **Our Approach:** We define the structure in a dictionary (`configs`) at the top of the file and iterate over it.
+    ```jinja2
+    {% set configs = [
+        {'table': ref('silver_bookings'), 'alias': 'sb', ...},
+        {'table': ref('silver_listings'), 'alias': 'sl', ...}
+    ] %}
+    -- Loop to generate SELECT columns
+    {% for config in configs %} ... {% endfor %}
+    -- Loop to generate JOINS
+    {% for config in configs %} ... {% endfor %}
+    ```
+  - **Benefit:** Adding a new table to the OBT is as simple as adding an entry to the `configs` list, rather than rewriting complex SQL joins.
+
+### 3. Custom Macros
+Macros are reusable functions written in Jinja/SQL throughout the project.
+
+- **`tag.sql`:**
+  - **Purpose:** Encapsulates business logic for categorizing data (e.g., tagging listings as 'Luxury', 'Economy' based on price).
+  - **Usage:** `{{ tag('PRICE_PER_NIGHT') }}` inside select statements.
+  - **Benefit:** If the business definition of "Luxury" changes, we update it in *one place* (the macro), and all models reflect the change.
+
+- **`trimmer.sql`:**
+  - **Purpose:** A utility macro to automatically trim whitespace from string columns.
+
+### 4. Snapshots (SCD Type 2)
+We implement **Slowly Changing Dimensions (SCD Type 2)** to track historical data changes.
+
+- **File:** `snapshots/dim_listings.yml`
+- **Configuration:**
+  - `strategy: timestamp`: Uses a column (e.g., `updated_at`) to detect changes.
+  - `dbt_valid_from` / `dbt_valid_to`: DBT automatically manages these columns.
+- **Outcome:** If a host changes their listing price, we keep the *old* price record (with an expiry date) and insert a *new* record. This allows for accurate historical reporting ("What was the price *last month*?").
+
+### 5. Specialized Testing & Alerts
+We go beyond standard schema tests (unique, not null) to implement business rule validation.
+
+- **Source Freshness & Integrity:**
+  - We test raw data in `tests/sources_test.sql`.
+- **Severity Configuration:**
+  - We use `config(severity = 'warn')` for non-critical anomalies.
+  - **Example:** `SELECT 1 FROM ... WHERE booking_amount < 2000`
+  - This warns us if booking values look suspicious but allows the pipeline to complete, preventing pipeline blockage for minor data quality warnings.
 
 ---
 
@@ -86,38 +130,6 @@ aws_dbt_snowflake_project:
       warehouse: COMPUTE_WH
       schema: dbt_schema
       threads: 1
-```
-
----
-
-## 🛠️ Advanced DBT Features
-
-### Macros
-Reusable SQL snippets to keep code DRY (Don't Repeat Yourself):
-- `tag.sql`: Generates tags based on column values.
-- `trimmer.sql`: Utility for string cleaning.
-- `generate_schema_name.sql`: Custom schema naming logic.
-
-### Snapshots
-Implements **Slowly Changing Dimensions (SCD Type 2)** to track historical changes in data (e.g., price changes, host status updates).
-- Configured in `snapshots/*.yml` files.
-- Tracks `updated_at` timestamps to manage validity windows (`dbt_valid_from`, `dbt_valid_to`).
-
-### Analyses
-Ad-hoc analytical queries located in the `analyses/` folder (e.g., `explore.sql`) for exploring data without creating permanent models.
-
----
-
-## 🧪 Testing & Quality Assurance
-
-### Source Testing & Alerts
-Robust testing ensures data quality before processing.
-- **Sources Test:** `tests/sources_test.sql` checks for anomalies, such as `booking_amount < 2000`.
-- **Alerting:** Configured with `severity = 'warn'`, meaning looking for these conditions will trigger warnings in the DBT run logs but not stop the pipeline, allowing for proactive monitoring.
-
-```sql
-{{ config(severity = 'warn') }}
-SELECT 1 FROM {{ source('staging', 'bookings') }} WHERE booking_amount < 2000
 ```
 
 ---
