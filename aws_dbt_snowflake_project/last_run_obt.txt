@@ -1,0 +1,22 @@
+﻿01:57:45  Running with dbt=1.11.2
+01:57:46  Registered adapter: snowflake=1.11.1
+01:57:46  Found 7 models, 3 analyses, 3 sources, 526 macros
+01:57:46  
+01:57:46  Concurrency: 1 threads (target='dev')
+01:57:46  
+01:57:47  1 of 1 START sql table model gold.obt .......................................... [RUN]
+01:57:48  1 of 1 ERROR creating sql table model gold.obt ................................. [ERROR in 0.45s]
+01:57:48  
+01:57:48  Finished running 1 table model in 0 hours 0 minutes and 2.21 seconds (2.21s).
+01:57:48  
+01:57:48  Completed with 1 error, 0 partial successes, and 0 warnings:
+01:57:48  
+01:57:48  Failure in model obt (models\gold\obt.sql)
+01:57:48    Database Error in model obt (models\gold\obt.sql)
+  000904 (42000): SQL compilation error: error line 21 at position 11
+  invalid identifier 'SILVER_BOOKINGS.HOST_ID'
+  compiled code at target\run\aws_dbt_snowflake_project\models\gold\obt.sql
+01:57:48  
+01:57:48    compiled code at target\compiled\aws_dbt_snowflake_project\models\gold\obt.sql
+01:57:48  
+01:57:48  Done. PASS=0 WARN=0 ERROR=1 SKIP=0 NO-OP=0 TOTAL=1

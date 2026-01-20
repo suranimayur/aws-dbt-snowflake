@@ -1,0 +1,22 @@
+﻿01:58:55  Running with dbt=1.11.2
+01:58:56  Registered adapter: snowflake=1.11.1
+01:58:56  Found 7 models, 3 analyses, 3 sources, 526 macros
+01:58:56  
+01:58:56  Concurrency: 1 threads (target='dev')
+01:58:56  
+01:58:58  1 of 1 START sql table model gold.obt .......................................... [RUN]
+01:58:58  1 of 1 ERROR creating sql table model gold.obt ................................. [ERROR in 0.45s]
+01:58:59  
+01:58:59  Finished running 1 table model in 0 hours 0 minutes and 2.42 seconds (2.42s).
+01:58:59  
+01:58:59  Completed with 1 error, 0 partial successes, and 0 warnings:
+01:58:59  
+01:58:59  Failure in model obt (models\gold\obt.sql)
+01:58:59    Database Error in model obt (models\gold\obt.sql)
+  002025 (42S21): SQL compilation error:
+  duplicate column name 'LISTING_ID'
+  compiled code at target\run\aws_dbt_snowflake_project\models\gold\obt.sql
+01:58:59  
+01:58:59    compiled code at target\compiled\aws_dbt_snowflake_project\models\gold\obt.sql
+01:58:59  
+01:58:59  Done. PASS=0 WARN=0 ERROR=1 SKIP=0 NO-OP=0 TOTAL=1

@@ -1,0 +1,32 @@
+﻿01:55:21  Running with dbt=1.11.2
+01:55:21  Registered adapter: snowflake=1.11.1
+01:55:21  Found 7 models, 3 analyses, 3 sources, 526 macros
+01:55:21  
+01:55:21  Concurrency: 1 threads (target='dev')
+01:55:21  
+01:55:23  1 of 7 START sql incremental model bronze.bronze_bookings ...................... [RUN]
+01:55:25  1 of 7 OK created sql incremental model bronze.bronze_bookings ................. [SUCCESS 0 in 2.31s]
+01:55:25  2 of 7 START sql incremental model bronze.bronze_hosts ......................... [RUN]
+01:55:26  2 of 7 OK created sql incremental model bronze.bronze_hosts .................... [SUCCESS 0 in 0.94s]
+01:55:26  3 of 7 START sql incremental model bronze.bronze_listings ...................... [RUN]
+01:55:27  3 of 7 OK created sql incremental model bronze.bronze_listings ................. [SUCCESS 0 in 0.94s]
+01:55:27  4 of 7 START sql table model gold.obt .......................................... [RUN]
+01:55:27  4 of 7 ERROR creating sql table model gold.obt ................................. [ERROR in 0.11s]
+01:55:27  5 of 7 START sql incremental model silver.silver_bookings ...................... [RUN]
+01:55:29  5 of 7 OK created sql incremental model silver.silver_bookings ................. [SUCCESS 0 in 1.74s]
+01:55:29  6 of 7 START sql incremental model silver.silver_hosts ......................... [RUN]
+01:55:30  6 of 7 OK created sql incremental model silver.silver_hosts .................... [SUCCESS 200 in 1.46s]
+01:55:30  7 of 7 START sql incremental model silver.silver_listings ...................... [RUN]
+01:55:32  7 of 7 OK created sql incremental model silver.silver_listings ................. [SUCCESS 500 in 1.35s]
+01:55:32  
+01:55:32  Finished running 6 incremental models, 1 table model in 0 hours 0 minutes and 11.08 seconds (11.08s).
+01:55:33  
+01:55:33  Completed with 1 error, 0 partial successes, and 0 warnings:
+01:55:33  
+01:55:33  Failure in model obt (models\gold\obt.sql)
+01:55:33    Database Error in model obt (models\gold\obt.sql)
+  001003 (42000): SQL compilation error:
+  syntax error line 6 at position 4 unexpected ')'.
+  compiled code at target\run\aws_dbt_snowflake_project\models\gold\obt.sql
+01:55:33  
+01:55:33  Done. PASS=6 WARN=0 ERROR=1 SKIP=0 NO-OP=0 TOTAL=7
